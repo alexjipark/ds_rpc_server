@@ -2,7 +2,7 @@ package ProtobufTest;
 
 message DataSTResponse {
   required string   address = 1;
-  required int32    balance = 2;
+  optional int32    balance = 2 [default = 0];
   repeated DataOwnership ownedDataList = 3;
 
   message DataOwnership {
@@ -10,8 +10,6 @@ message DataSTResponse {
     required string originAddr = 2;
   }
 }
-
-
 
 message DataSTRequest {
 
@@ -23,7 +21,11 @@ message DataSTRequest {
   }
 
   required RequestType reqType = 1;
-  required string address = 2;
+  required string   address = 2;
+  optional string   destAddr = 3    [default = ""];
+  optional int32    amount = 4      [default = 0];
+  optional string   datahash = 5    [default = ""];
+
 }
 
 message TestMessage {
