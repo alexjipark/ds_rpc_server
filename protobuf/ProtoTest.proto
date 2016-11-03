@@ -1,0 +1,47 @@
+package ProtobufTest;
+
+message DataSTResponse {
+  required string   address = 1;
+  required int32    balance = 2;
+  repeated DataOwnership ownedDataList = 3;
+
+  message DataOwnership {
+    required string dataHash = 1;
+    required string originAddr = 2;
+  }
+}
+
+
+
+message DataSTRequest {
+
+  enum RequestType {
+     ReqCheckBalance = 0;
+     ReqTransferCurrency = 1;
+     ReqTransferDataOwnerhship = 2;
+     ReqGetDataList = 3;
+  }
+
+  required RequestType reqType = 1;
+  required string address = 2;
+}
+
+message TestMessage {
+  required string 	clientName = 1;
+  required int32 	clientId = 2;
+  optional string 	description = 3 [default = "NONE"];
+  repeated MsgItem 	messageitems = 4;
+
+  enum ItemType {
+    TypeX = 0;
+    TypeY = 1;
+    TypeZ = 2;
+  }
+
+   message MsgItem {
+    required int32 	id = 1;
+    optional string 	itemName = 2;
+    optional int32 	itemValue = 3;
+    optional ItemType 	itemType = 4;
+   }
+}
