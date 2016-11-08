@@ -277,7 +277,7 @@ func TransferDataOwnership (server_addr string, secret string, src_addr string, 
 				Sequence: sequence+1,
 			},
 		},
-		Outputs: []types.TxInput {
+		Outputs: []types.TxOutput {
 			types.TxOutput{
 				Address: hex_dst_addr,
 				Coins: types.Coins{{data_hash, 1}},
@@ -294,7 +294,7 @@ func TransferDataOwnership (server_addr string, secret string, src_addr string, 
 	txBytes := wire.BinaryBytes(struct{types.Tx}{tx})
 
 	//Subscribe an event for Tx
-	eid := tdtypes.EventStringTx(tdtypes.Tx{txBytes})
+	eid := tdtypes.EventStringTx(tdtypes.Tx(txBytes))
 	if err = ws.Subscribe(eid); err != nil {
 		fmt.Printf("Error in subscribing EventStringTx[%s]\n", eid)
 		fmt.Println(err.Error())
