@@ -29,6 +29,15 @@ func checkBalance (server_addr *C.char, src_addr *C.char) int64 {
 	return amount
 }
 
+//export transferDataOwnership
+func transferDataOwnership(server_addr *C.char, secret *C.char, src_addr *C.char, data_hash *C.char, dst_addr *C.char, sequence int) bool {
+	//func TransferDataOwnership (server_addr string, secret string, src_addr string, data_hash string, dst_addr string, sequence int) (bool, error)
+	retbool, err := libc.TransferDataOwnership(C.GoString(server_addr),C.GoString(secret),C.GoString(src_addr),C.GoString(data_hash),C.GoString(dst_addr), sequence)
+	fmt.Println( retbool, err)
+
+	return retbool
+}
+
 func main() {
 
 }

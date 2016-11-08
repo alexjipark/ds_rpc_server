@@ -24,6 +24,7 @@ import (
 // 3. 데이터 소유권 전송 transaction
 // 4. 특정 계정의 소유 데이터 리스트 List
 
+// Done..
 func GenerateAddress (secret string) (address string) {
 
 	genAccount := test.PrivateAccountFromSecret(secret)
@@ -33,6 +34,7 @@ func GenerateAddress (secret string) (address string) {
 	return hexaddr
 }
 
+// Done..
 func TransferCurrency (server_addr string, secret string, src_addr string, dst_addr string, amount int64, sequence int ) (bool, error) {
 
 	ws := rpcclient.NewWSClient(server_addr, "/websocket")
@@ -131,6 +133,7 @@ func TransferCurrency (server_addr string, secret string, src_addr string, dst_a
 	return true, nil
 }
 
+// Done..
 func CheckBalance (server_addr string, addr string) (amount int64, err error) {
 	ws := rpcclient.NewWSClient(server_addr, "/websocket")
 	chainID := "chain-AMUKE0"
@@ -231,8 +234,101 @@ func CheckBalance (server_addr string, addr string) (amount int64, err error) {
 	return amount, nil
 }
 
-func transferDataOwnership (server_addr string, src_addr string, data_hash string, dst_addr string) (ret bool, err error) {
-	return false, nil
+func TransferDataOwnership (server_addr string, secret string, src_addr string, data_hash string, dst_addr string, sequence int) (bool, error) {
+
+	ws := rpcclient.NewWSClient(server_addr, "/websocket")
+	chainID := "chain-AMUKE0"
+
+	_, err := ws.Start()
+	if err != nil {
+		fmt.Printf("Error in Starting a client for the Server:[%s]\n", server_addr)
+		return false, nil
+	}
+
+	defer ws.Close()
+
+	hex_src_addr, err := hex.DecodeString(src_addr)
+	if err != nil {
+		fmt.Printf("Error in Decoding str[%s]\n", src_addr)
+		return false, nil
+	}
+
+	hex_dst_addr, err := hex.DecodeString(dst_addr)
+	if err != nil {
+		fmt.Printf("Error in Decoding str[%s]\n", dst_addr)
+		return false, nil
+	}
+	fmt.Printf("SRC Addr[%X], DST Addr[%X]\n", hex_src_addr, hex_dst_addr)
+
+	// Get the Source Account
+	root := test.PrivateAccountFromSecret(secret)
+	//Check Account
+	fmt.Printf("Private Key : %X\n", root.PrivKey)
+	fmt.Printf("Public Byte : %X\n", root.Account.PubKey.Bytes())
+	fmt.Printf("Public Addr : %X\n", root.Account.PubKey.Address())
+
+	// instead of coin type, put data_hash in place..
+	tx := &types.SendTx {
+		Inputs: []types.TxInput {
+			types.TxInput {
+				Address: hex_src_addr,	// root. Account.PubKey.Address()
+				PubKey: root.Account.PubKey,
+				Coins: types.Coins {{data_hash, 1}},
+				Sequence: sequence+1,
+			},
+		},
+		Outputs: []types.TxInput {
+			types.TxOutput{
+				Address: hex_dst_addr,
+				Coins: types.Coins{{data_hash, 1}},
+			},
+		},
+	}
+
+	//Sign Request.. Bytes to be signed..
+	signBytes := tx.SignBytes(chainID)
+	sig := root.PrivKey.Sign(signBytes) // made Signature from signBytes
+	tx.Inputs[0].Signature = sig
+	fmt.Println("tx: ", tx)
+
+	txBytes := wire.BinaryBytes(struct{types.Tx}{tx})
+
+	//Subscribe an event for Tx
+	eid := tdtypes.EventStringTx(tdtypes.Tx{txBytes})
+	if err = ws.Subscribe(eid); err != nil {
+		fmt.Printf("Error in subscribing EventStringTx[%s]\n", eid)
+		fmt.Println(err.Error())
+	}
+	defer ws.Unsubscribe(eid)
+
+	//Write Request
+	request := rpctypes.NewRPCRequest("fakeid", "broadcast_tx_commit", Arr(txBytes))
+	reqBytes := wire.JSONBytes(request)
+	err = ws.WriteMessage(websocket.TextMessage, reqBytes)
+
+	if err != nil {
+		fmt.Println("Error in Writing request through websocket.. :", err.Error())
+		return false, nil
+	}
+
+	// Wait For an Event
+	test.WaitForEvent(ws, eid, true, func(){}, func(eid string, b interface{}) error {
+		evt, ok := b.(tdtypes.EventDataTx)
+		if !ok {
+			fmt.Println("Got Wrong Event Type..", b)
+		} else {
+			if bytes.Compare(evt.Tx, txBytes) != 0 {
+				fmt.Println("got returned Event with diffferent Tx")
+			}
+			fmt.Println("Event Code :", evt.Code)
+			fmt.Println("Event Error:", evt.Error)
+			fmt.Println("Event Log:", evt.Log)
+			fmt.Println("Event Tx Hash : ", evt.Tx.Hash())
+		}
+		return nil
+	})
+
+	return true, nil
 }
 
 func getListofDataOwnership (addr string) []string {
